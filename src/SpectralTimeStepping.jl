@@ -11,7 +11,7 @@ module SpectralTimeStepping
     function SpectralTimeSteppingProblem(f,u0,tspan)
         const sp = space(u0)
         const n = ncoefficients(u0)
-        prob = ODEProblem((t,u)->pad!(f(t,Fun(u,sp)).coefficients,n),u0.coefficients,tspan)
+        prob = ODEProblem((t,u)->pad!(f(t,Fun(sp,u)).coefficients,n),u0.coefficients,tspan)
         SpectralTimeSteppingProblem(prob,sp)
     end
 
@@ -20,7 +20,7 @@ module SpectralTimeStepping
         space::S
     end
 
-    (sol::SpectralTimeSteppingSolution)(t) = Fun(sol.solution(t),sol.space)
+    (sol::SpectralTimeSteppingSolution)(t) = Fun(sol.space,sol.solution(t))
     (sol::SpectralTimeSteppingSolution)(t,x) = sol(t)(x)
 
     DifferentialEquations.solve(prob::SpectralTimeSteppingProblem) =
