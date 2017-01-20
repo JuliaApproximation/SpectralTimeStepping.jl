@@ -23,6 +23,6 @@ module SpectralTimeStepping
     (sol::SpectralTimeSteppingSolution)(t) = Fun(sol.solution(t),sol.space)
     (sol::SpectralTimeSteppingSolution)(t,x) = sol(t)(x)
 
-    DifferentialEquations.solve(prob::SpectralTimeSteppingProblem) =
-        SpectralTimeSteppingSolution(solve(prob.problem),prob.space)
+    DifferentialEquations.solve(prob::SpectralTimeSteppingProblem,alg,args...;kwargs...) =
+        SpectralTimeSteppingSolution(solve(prob.problem,alg,args...;kwargs...),prob.space)
 end    # module
