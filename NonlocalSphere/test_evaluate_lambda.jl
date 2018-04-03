@@ -66,7 +66,7 @@ end
 
 clf()
 loglog(L, tREC, ".k", L, tASY, "xk")
-loglog(L, 1.25e-7*L.*log.(L), "-k")
+loglog(L, 6.25e-8*L.*log.(L), "-k")
 loglog(L, 1e-8*L.^2, "--k")
 ylim(1e-5,1e0)
 xlabel("\$\\ell\$"); ylabel("Execution Time (s)"); grid()

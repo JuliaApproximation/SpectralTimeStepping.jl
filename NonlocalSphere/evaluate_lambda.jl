@@ -35,16 +35,20 @@ function legendre_asy(n::Int, θ::Number)
     nphalf = n+one(θ)/2
     arg = nphalf*πθ
 
-    ret += besselj(0, arg)
+    J0 = besselj(0, arg)
+    ret += J0
 
+    J1 = besselj(1, arg)
     nphalfν = nphalf
-    ret += (πθ*cpθ-spθ)/(8*πθ*spθ)*besselj(1, arg)/nphalfν
+    ret += (πθ*cpθ-spθ)/(8*πθ*spθ)*J1/nphalfν
 
+    J2 = 2/arg*J1-J0
     nphalfν *= nphalf
-    ret += (6*πθ*spθ*cpθ-15spθ^2+πθ^2*(9-spθ^2))/(128*πθ^2*spθ^2)*besselj(2, arg)/nphalfν
+    ret += (6*πθ*spθ*cpθ-15spθ^2+πθ^2*(9-spθ^2))/(128*πθ^2*spθ^2)*J2/nphalfν
 
+    J3 = 4/arg*J2-J1
     nphalfν *= nphalf
-    ret += 5*(((πθ^3+21πθ)*spθ^2+15πθ^3)*cpθ-((3πθ^2+63)*spθ^2-27πθ^2)*spθ)/(1024*πθ^3*spθ^3)*besselj(3, arg)/nphalfν
+    ret += 5*(((πθ^3+21πθ)*spθ^2+15πθ^3)*cpθ-((3πθ^2+63)*spθ^2-27πθ^2)*spθ)/(1024*πθ^3*spθ^3)*J3/nphalfν
 
     ret *= sqrt(θ*π/sinpi(θ))
 end
