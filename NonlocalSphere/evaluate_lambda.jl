@@ -1,6 +1,6 @@
 using FastTransforms
 
-import FastTransforms: RecurrencePlan, backward_recurrence, clenshawcurtisweights
+import FastTransforms: RecurrencePlan, backward_recurrence, chebyshevjacobimoments1, clenshawcurtisweights!
 
 #
 # Numerical evaluation of P_n(cospi(θ)) - 1 via an expansion in half-angled
@@ -77,7 +77,7 @@ evaluateLambda(ℓ, δ, α) = evaluate_lambda(round(Int, ℓ), δ, α)
 function evaluate_lambda_rec{T}(ℓ::Int, δ::T, α::T)
     # Clenshaw-Curtis points in angle (mod pi)
     θ = T[k/ℓ for k in zero(T) : ℓ]
-    w = clenshawcurtisweights(ℓ+1, α, zero(T))
+    w = clenshawcurtisweights!(chebyshevjacobimoments1(T, ℓ+1, α, zero(T)))
     φ = T[2/π*asin(δ/2*sinpi(θ/2)) for θ in θ]
 
     RP = RecurrencePlan(zero(T), zero(T), ℓ+1)
@@ -100,7 +100,7 @@ end
 function evaluate_lambda_asy{T}(ℓ::Int, δ::T, α::T)
     # Clenshaw-Curtis points in angle (mod pi)
     θ = T[k/ℓ for k in zero(T) : ℓ]
-    w = clenshawcurtisweights(ℓ+1, α, zero(T))
+    w = clenshawcurtisweights!(chebyshevjacobimoments1(T, ℓ+1, α, zero(T)))
     φ = T[2/π*asin(δ/2*sinpi(θ/2)) for θ in θ]
 
     s = zero(T)
