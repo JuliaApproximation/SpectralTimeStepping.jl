@@ -1,11 +1,7 @@
 function ETDRK4(SLPDE::SemiLinearPDE{1, S}, T::Number, n::Int) where S
     U0 = SLPDE.U0[1]
     U = deepcopy(U0) # solution spherical harmonic coefficients
-    V = zero(U) # solution Fourier coefficients
-    F = zero(U) # solution function values
     NU = zero(U) # nonlinearity spherical harmonic coefficients
-    NV = zero(U) # nonlinearity Fourier coefficients
-    NF = zero(U) # nonlinearity function values
 
     # ETDRK4 stages
     A = zero(U)
@@ -15,9 +11,9 @@ function ETDRK4(SLPDE::SemiLinearPDE{1, S}, T::Number, n::Int) where S
     NB = zero(U)
     NC = zero(U)
 
-    P = plan_sph2fourier(U; sketch = :none)
-    Ps = FastTransforms.plan_synthesis(U)
-    Pa = FastTransforms.plan_analysis(U)
+    P = plan_sph2fourier(U)
+    PS = plan_sph_synthesis(U)
+    PA = plan_sph_analysis(U)
 
     L = create_linear_operator(SLPDE.L, size(U, 1), size(U, 2)÷2 + 1)
     h = S(T)/n
@@ -26,29 +22,29 @@ function ETDRK4(SLPDE::SemiLinearPDE{1, S}, T::Number, n::Int) where S
     # component-wise on the spherical harmonic coefficients.
 
     Z = L*h
-    ez = exp.(Z)
-    ez2 = exp.(Z./2)
-    h2ez2m1 = (h/2.0).*φ1.(Z./2)
-    hezα = h.*expα.(Z)
-    h2ezβ = 2h.*expβ.(Z)
-    hezγ = h.*expγ.(Z)
+    ez = sph_zero_spurious_modes!(exp.(Z))
+    ez2 = sph_zero_spurious_modes!(exp.(Z./2))
+    h2ez2m1 = sph_zero_spurious_modes!((h/2.0).*φ1.(Z./2))
+    hezα = sph_zero_spurious_modes!(h.*expα.(Z))
+    h2ezβ = sph_zero_spurious_modes!(2h.*expβ.(Z))
+    hezγ = sph_zero_spurious_modes!(h.*expγ.(Z))
     ez2u = zero(Z)
 
     for k=1:n
         ez2u .= ez2.*U
-        evaluate_nonlinear_operator!(SLPDE.N, P, Ps, Pa, U, V, F, NF, NV, NU)
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NU .= U)
         A .= ez2u .+ h2ez2m1.*NU
-        evaluate_nonlinear_operator!(SLPDE.N, P, Ps, Pa, A, V, F, NF, NV, NA)
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NA .= A)
         B .= ez2u .+ h2ez2m1.*NA
-        evaluate_nonlinear_operator!(SLPDE.N, P, Ps, Pa, B, V, F, NF, NV, NB)
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NB .= B)
         C .= ez2.*A .+ h2ez2m1.*(2.0.*NB .- NU)
-        evaluate_nonlinear_operator!(SLPDE.N, P, Ps, Pa, C, V, F, NF, NV, NC)
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NC .= C)
         U .= ez.*U .+ hezα.*NU .+ h2ezβ.*(NA .+ NB) .+ hezγ.*NC
     end
 
     U
 end
-
+#=
 function ETDRK4(SLPDE::SemiLinearPDE{2, S}, T::Number, n::Int) where S
     U0 = SLPDE.U0
     U = deepcopy(U0) # solution spherical harmonic coefficients
@@ -104,6 +100,102 @@ function ETDRK4(SLPDE::SemiLinearPDE{2, S}, T::Number, n::Int) where S
 
     U
 end
+=#
+function fillF!(Ft, F)
+    m, n = size(F)
+    FN = 0.0
+    FS = 0.0
+    @inbounds for j = 1:n
+        FN += F[1, j]
+        FS += F[m, j]
+    end
+    FN /= n
+    FS /= n
+    @inbounds for j = 1:n
+        for i = 1:m
+            Ft[i+1, j] = F[i, j]
+        end
+        Ft[1, j] = FN
+        Ft[m+2, j] = FS
+    end
+    @inbounds for i = 1:m+2
+        Ft[i, n+1] = Ft[i, 1]
+    end
+end
+
+
+function ETDRK4(SLPDE::SemiLinearPDE{1, S}, T::Number, n::Int, surf, io) where S
+    U0 = SLPDE.U0[1]
+    U = deepcopy(U0) # solution spherical harmonic coefficients
+    NU = zero(U) # nonlinearity spherical harmonic coefficients
+    F = zero(U) # solution function values
+    Ft = zeros(Float32, size(F, 1)+2, size(F, 2)+1)
+
+    # ETDRK4 stages
+    A = zero(U)
+    B = zero(U)
+    C = zero(U)
+    NA = zero(U)
+    NB = zero(U)
+    NC = zero(U)
+
+    P = plan_sph2fourier(U)
+    PS = plan_sph_synthesis(U)
+    PA = plan_sph_analysis(U)
+
+    L = create_linear_operator(SLPDE.L, size(U, 1), size(U, 2)÷2 + 1)
+    h = S(T)/n
+
+    # Create all the matrices of diagonal scalings used in ETDRK4. These operate
+    # component-wise on the spherical harmonic coefficients.
+
+    Z = L*h
+    ez = sph_zero_spurious_modes!(exp.(Z))
+    ez2 = sph_zero_spurious_modes!(exp.(Z./2))
+    h2ez2m1 = sph_zero_spurious_modes!((h/2.0).*φ1.(Z./2))
+    hezα = sph_zero_spurious_modes!(h.*expα.(Z))
+    h2ezβ = sph_zero_spurious_modes!(2h.*expβ.(Z))
+    hezγ = sph_zero_spurious_modes!(h.*expγ.(Z))
+    ez2u = zero(Z)
+
+    for k=1:n
+        ez2u .= ez2.*U
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NU .= U)
+        A .= ez2u .+ h2ez2m1.*NU
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NA .= A)
+        B .= ez2u .+ h2ez2m1.*NA
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NB .= B)
+        C .= ez2.*A .+ h2ez2m1.*(2.0.*NB .- NU)
+        evaluate_nonlinear_operator!(SLPDE.N, P, PS, PA, NC .= C)
+        U .= ez.*U .+ hezα.*NU .+ h2ezβ.*(NA .+ NB) .+ hezγ.*NC
+
+        # plotting
+        F .= U
+        lmul!(P, F)
+        lmul!(PS, F)
+        fillF!(Ft, F)
+        surf[:color] = Ft # animate scene
+        recordframe!(io) # record a new frame
+    end
+
+    U
+end
+
+function sph_zero_spurious_modes!(A::AbstractMatrix)
+    M, N = size(A)
+    n = N÷2
+    @inbounds for j = 1:n-1
+        @simd for i = M-j+1:M
+            A[i,2j] = 0
+            A[i,2j+1] = 0
+        end
+    end
+    @inbounds @simd for i = M-n+1:M
+        A[i,2n] = 0
+        2n < N && (A[i,2n+1] = 0)
+    end
+    A
+end
 
 #
 # These formulæ, appearing in Eq. (2.5) of:
@@ -119,17 +211,17 @@ expγ_asy(x) = (exp(x)*(4-x)-4-3x-x^2)/x^3
 
 # TODO: General types
 
-expα_taylor(x::Union{Float64,Complex128}) = @evalpoly(x,1/6,1/6,3/40,1/45,5/1008,1/1120,7/51840,1/56700,1/492800,1/4790016,11/566092800,1/605404800,13/100590336000,1/106748928000,1/1580833013760,1/25009272288000,17/7155594141696000,1/7508956815360000)
-expβ_taylor(x::Union{Float64,Complex128}) = @evalpoly(x,1/6,1/12,1/40,1/180,1/1008,1/6720,1/51840,1/453600,1/4435200,1/47900160,1/566092800,1/7264857600,1/100590336000,1/1494484992000,1/23712495206400,1/400148356608000,1/7155594141696000,1/135161222676480000)
-expγ_taylor(x::Union{Float64,Complex128}) = @evalpoly(x,1/6,0/1,-1/120,-1/360,-1/1680,-1/10080,-1/72576,-1/604800,-1/5702400,-1/59875200,-1/691891200,-1/8717829120,-1/118879488000,-1/1743565824000,-1/27360571392000,-1/457312407552000,-1/8109673360588800)
+expα_taylor(x::Union{Float64,ComplexF64}) = @evalpoly(x,1/6,1/6,3/40,1/45,5/1008,1/1120,7/51840,1/56700,1/492800,1/4790016,11/566092800,1/605404800,13/100590336000,1/106748928000,1/1580833013760,1/25009272288000,17/7155594141696000,1/7508956815360000)
+expβ_taylor(x::Union{Float64,ComplexF64}) = @evalpoly(x,1/6,1/12,1/40,1/180,1/1008,1/6720,1/51840,1/453600,1/4435200,1/47900160,1/566092800,1/7264857600,1/100590336000,1/1494484992000,1/23712495206400,1/400148356608000,1/7155594141696000,1/135161222676480000)
+expγ_taylor(x::Union{Float64,ComplexF64}) = @evalpoly(x,1/6,0/1,-1/120,-1/360,-1/1680,-1/10080,-1/72576,-1/604800,-1/5702400,-1/59875200,-1/691891200,-1/8717829120,-1/118879488000,-1/1743565824000,-1/27360571392000,-1/457312407552000,-1/8109673360588800)
 
 expα(x::Float64) = abs(x) < 17/16 ? expα_taylor(x) : expα_asy(x)
 expβ(x::Float64) = abs(x) < 19/16 ? expβ_taylor(x) : expβ_asy(x)
 expγ(x::Float64) = abs(x) < 15/16 ? expγ_taylor(x) : expγ_asy(x)
 
-expα(x::Complex128) = abs2(x) < (17/16)^2 ? expα_taylor(x) : expα_asy(x)
-expβ(x::Complex128) = abs2(x) < (19/16)^2 ? expβ_taylor(x) : expβ_asy(x)
-expγ(x::Complex128) = abs2(x) < (15/16)^2 ? expγ_taylor(x) : expγ_asy(x)
+expα(x::ComplexF64) = abs2(x) < (17/16)^2 ? expα_taylor(x) : expα_asy(x)
+expβ(x::ComplexF64) = abs2(x) < (19/16)^2 ? expβ_taylor(x) : expβ_asy(x)
+expγ(x::ComplexF64) = abs2(x) < (15/16)^2 ? expγ_taylor(x) : expγ_asy(x)
 
 expα(x) = expα_asy(x)
 expβ(x) = expβ_asy(x)

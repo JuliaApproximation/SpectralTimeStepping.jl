@@ -1,3 +1,5 @@
+import FastTransforms: FTPlan
+
 abstract type LinearOperator{T} end
 
 struct NonlinearOperator{F}
@@ -51,9 +53,10 @@ end
 
 function create_linear_operator(NLB::NonlocalLaplaceBeltrami{T}, m::Integer, n::Integer) where T
     L = zeros(T, m, 2n-1)
+    λ = evaluate_lambda(m, NLB.α, NLB.δ)
     ϵ = NLB.ϵ
     @inbounds for i = 1:m
-        L[i,1] = ϵ^2*evaluate_lambda(i-1, NLB.δ, NLB.α)
+        L[i,1] = ϵ^2*λ[i]
     end
     @inbounds for j = 1:n-1
         for i = 1:m-j
@@ -64,39 +67,38 @@ function create_linear_operator(NLB::NonlocalLaplaceBeltrami{T}, m::Integer, n::
     L
 end
 
-function evaluate_nonlinear_operator!(NL::NonlinearOperator, P, Ps, Pa, U::Matrix{T}, V::Matrix{T}, F::Matrix{T}, NF::Matrix{T}, NV::Matrix{T}, NU::Matrix{T}) where T
+function evaluate_nonlinear_operator!(NL::NonlinearOperator, P::FTPlan{T, 2, FastTransforms.SPHERE}, PS::FTPlan{T, 2, FastTransforms.SPHERESYNTHESIS}, PA::FTPlan{T, 2, FastTransforms.SPHEREANALYSIS}, NU::Matrix{T}) where T
     # Compute spherical harmonic coefficients of a nonlinear operator N(u).
 
     # sph2fourier
-    A_mul_B!(fill!(V, zero(T)), P, U)
+    lmul!(P, NU)
     # Fourier to function values on sphere
-    A_mul_B!(fill!(F, zero(T)), Ps, V)
-    NF .= NL.N.(F)
+    lmul!(PS, NU)
+    NU .= NL.N.(NU)
     # Function values on sphere to Fourier
-    A_mul_B!(fill!(NV, zero(T)), Pa, NF)
+    lmul!(PA, NU)
     # fourier2sph
-    At_mul_B!(fill!(NU, zero(T)), P, NV)
+    ldiv!(P, NU)
 
     return NU
 end
 
-function evaluate_nonlinear_operator!(NL::Tuple{NonlinearOperator{F1}, NonlinearOperator{F2}}, P, Ps, Pa, U::NTuple{2, Matrix{T}}, V::NTuple{2, Matrix{T}}, F::NTuple{2, Matrix{T}}, NF::NTuple{2, Matrix{T}}, NV::NTuple{2, Matrix{T}}, NU::NTuple{2, Matrix{T}}) where {T, F1, F2}
+function evaluate_nonlinear_operator!(NL::Tuple{NonlinearOperator{F1}, NonlinearOperator{F2}}, P::FTPlan{T, 2, FastTransforms.SPHERE}, PS::FTPlan{T, 2, FastTransforms.SPHERESYNTHESIS}, PA::FTPlan{T, 2, FastTransforms.SPHEREANALYSIS}, NU::NTuple{2, Matrix{T}}) where {T, F1, F2}
     # Compute spherical harmonic coefficients of a nonlinear operator N(u).
 
     # sph2fourier
-    A_mul_B!(fill!(V[1], zero(T)), P[1], U[1])
-    A_mul_B!(fill!(V[2], zero(T)), P[2], U[2])
+    lmul!(P, NU[1])
+    lmul!(P, NU[2])
     # Fourier to function values on sphere
-    A_mul_B!(fill!(F[1], zero(T)), Ps[1], V[1])
-    A_mul_B!(fill!(F[2], zero(T)), Ps[2], V[2])
-    NF[1] .= NL[1].N.(F[1], F[2])
-    NF[2] .= NL[2].N.(F[1], F[2])
+    lmul!(PS, NU[1])
+    lmul!(PS, NU[2])
+    NU[1], NU[2] .= NL[1].N.(NU[1], NU[2]), NL[2].N.(NU[1], NU[2])
     # Function values on sphere to Fourier
-    A_mul_B!(fill!(NV[1], zero(T)), Pa[1], NF[1])
-    A_mul_B!(fill!(NV[2], zero(T)), Pa[2], NF[2])
+    lmul!(PA, NU[1])
+    lmul!(PA, NU[2])
     # fourier2sph
-    At_mul_B!(fill!(NU[1], zero(T)), P[1], NV[1])
-    At_mul_B!(fill!(NU[2], zero(T)), P[2], NV[2])
+    ldiv!(P, NU[1])
+    ldiv!(P, NU[2])
 
     return NU
 end
