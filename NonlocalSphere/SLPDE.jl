@@ -83,7 +83,7 @@ function evaluate_nonlinear_operator!(NL::NonlinearOperator, P::FTPlan{T, 2, Fas
     return NU
 end
 
-function evaluate_nonlinear_operator!(NL::Tuple{NonlinearOperator{F1}, NonlinearOperator{F2}}, P::FTPlan{T, 2, FastTransforms.SPHERE}, PS::FTPlan{T, 2, FastTransforms.SPHERESYNTHESIS}, PA::FTPlan{T, 2, FastTransforms.SPHEREANALYSIS}, NU::NTuple{2, Matrix{T}}) where {T, F1, F2}
+function evaluate_nonlinear_operator!(NL::Tuple{NonlinearOperator{F1}, NonlinearOperator{F2}}, P::FTPlan{T, 2, FastTransforms.SPHERE}, PS::FTPlan{T, 2, FastTransforms.SPHERESYNTHESIS}, PA::FTPlan{T, 2, FastTransforms.SPHEREANALYSIS}, NU::NTuple{2, Matrix{T}}, TEMP::Matrix{T}) where {T, F1, F2}
     # Compute spherical harmonic coefficients of a nonlinear operator N(u).
 
     # sph2fourier
@@ -92,7 +92,9 @@ function evaluate_nonlinear_operator!(NL::Tuple{NonlinearOperator{F1}, Nonlinear
     # Fourier to function values on sphere
     lmul!(PS, NU[1])
     lmul!(PS, NU[2])
-    NU[1], NU[2] .= NL[1].N.(NU[1], NU[2]), NL[2].N.(NU[1], NU[2])
+    TEMP .= NU[1]
+    NU[1] .= NL[1].N.(NU[1], NU[2])
+    NU[2] .= NL[2].N.(TEMP, NU[2])
     # Function values on sphere to Fourier
     lmul!(PA, NU[1])
     lmul!(PA, NU[2])

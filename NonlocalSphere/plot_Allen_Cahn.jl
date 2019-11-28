@@ -38,9 +38,9 @@ n = round(Int, 6*T)
 SLPDE = SemiLinearPDE(LaplaceBeltrami(0.02), NonlinearOperator(u->u-u^3), U0)
 io = VideoStream(scene);
 ETDRK4(SLPDE, T, n, surf, io)
-Makie.save("/Users/Mikael/LAC.gif", io)
+Makie.save("plots/LAC.gif", io)
 
 SLPDE = SemiLinearPDE(NonlocalLaplaceBeltrami(0.02, 0.0, 0.2), NonlinearOperator(u->u-u^3), U0)
 io = VideoStream(scene);
 ETDRK4(SLPDE, T, n, surf, io)
-Makie.save("/Users/Mikael/NAC.gif", io)
+Makie.save("plots/NAC.gif", io)
