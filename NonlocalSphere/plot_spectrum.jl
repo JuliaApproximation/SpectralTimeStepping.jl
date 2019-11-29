@@ -20,5 +20,5 @@ for i = 1:length(α)
     loglog(L, -λlap, "-k", L, -λ1, ".k", L, -λ2, "xk", L, -λ3, "+k", L, -λ4, "--k")
     xlabel("\$\\ell\$"); ylabel("Numerical Evaluation of \$\\lambda_\\delta(\\ell)\$ at \$\\alpha=$(α[i])\$"); grid()
     legend(["\$-\\lambda_0(\\ell)\$","\$-\\lambda_{$(δ1)}(\\ell)\$","\$-\\lambda_{$(δ2)}(\\ell)\$","\$-\\lambda_{$(δ3 == Int(δ3) ? Int(δ3) : δ3)}(\\ell)\$","\$-\\lambda_{$(δ4 == Int(δ4) ? Int(δ4) : δ4)}(\\ell)\$"])
-    savefig("plot_spectrum$(i).pdf")
+    savefig("plots/plot_spectrum$(i).pdf")
 end
