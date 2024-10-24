@@ -1,4 +1,4 @@
-using FastTransforms, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, Random
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -27,7 +27,7 @@ lmul!(PS, F)
 fillF!(Ft, F)
 
 scene = Scene(resolution = (1200, 1200));
-surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = (-1.0, 1.0))[end];
+surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = (-1.0, 1.0));
 update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
 scene.center = false
 scene

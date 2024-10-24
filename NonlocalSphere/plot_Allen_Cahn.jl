@@ -1,4 +1,4 @@
-using FastTransforms, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, Random
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -7,7 +7,7 @@ include("sphcesaro.jl")
 
 Random.seed!(0)
 
-n = 64
+n = 128
 U0 = zeros(4n, 8n-1);
 U0[1:n, 1:2n-1] = sphrandn(Float64, n, 2n-1)/n
 n = size(U0, 1)
@@ -27,7 +27,7 @@ lmul!(PS, F)
 fillF!(Ft, F)
 
 scene = Scene(resolution = (1200, 1200));
-surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = (-1.0, 1.0))[end];
+surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = (-1.0, 1.0));
 update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
 scene.center = false
 scene
@@ -39,8 +39,9 @@ SLPDE = SemiLinearPDE(LaplaceBeltrami(0.02), NonlinearOperator(u->u-u^3), U0)
 io = VideoStream(scene);
 ETDRK4(SLPDE, T, n, surf, io)
 Makie.save("plots/LAC.gif", io)
-
+#=
 SLPDE = SemiLinearPDE(NonlocalLaplaceBeltrami(0.02, 0.0, 0.2), NonlinearOperator(u->u-u^3), U0)
 io = VideoStream(scene);
 ETDRK4(SLPDE, T, n, surf, io)
 Makie.save("plots/NAC.gif", io)
+=#

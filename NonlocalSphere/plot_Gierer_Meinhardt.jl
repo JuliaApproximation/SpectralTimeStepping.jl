@@ -1,4 +1,4 @@
-using FastTransforms, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, Random
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -36,7 +36,7 @@ fillF!(Gt, G)
 println("The extrema of v: ", extrema(G))
 
 scene = Scene(resolution = (1200, 1200));
-surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(Ft))[end];
+surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(Ft));
 update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
 scene.center = false
 scene

@@ -1,4 +1,4 @@
-using FastTransforms, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, Random
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -47,7 +47,7 @@ fillF!(Gt, G)
 println("These are the extrema of the first component: ", extrema(F))
 println(minimum(F)/(ue/sqrt(4π)),"  ",maximum(F)/(ue/sqrt(4π)))
 scene = Scene(resolution = (1200, 1200));
-surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(F))[end];
+surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(F));
 update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
 scene.center = false
 scene
@@ -57,7 +57,7 @@ Makie.save("plots/NBRu0.jpeg", scene)
 println("These are the extrema of the second component: ", extrema(G))
 println(minimum(G)/(ve/sqrt(4π)),"  ",maximum(G)/(ve/sqrt(4π)))
 scene = Scene(resolution = (1200, 1200));
-surf = surface!(scene, x, y, z, color = Gt, colormap = :viridis, colorrange = extrema(G))[end];
+surf = surface!(scene, x, y, z, color = Gt, colormap = :viridis, colorrange = extrema(G));
 update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
 scene.center = false
 scene
