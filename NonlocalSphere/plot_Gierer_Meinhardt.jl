@@ -1,4 +1,5 @@
-using FastTransforms, LinearAlgebra, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, GLMakie, Random
+import Makie.Vec3d
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -35,10 +36,9 @@ lmul!(PS, G)
 fillF!(Gt, G)
 println("The extrema of v: ", extrema(G))
 
-scene = Scene(resolution = (1200, 1200));
+scene = Scene(size = (1200, 1200));
 surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(Ft));
-update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
-scene.center = false
+update_cam!(scene, Camera3D(scene), Vec3d(2.5), Vec3d(0), Vec3d(0, 0, 1))
 scene
 Makie.save("plots/LGMu0.jpeg", scene)
 Makie.save("plots/NGMu0.jpeg", scene)
@@ -48,10 +48,12 @@ n = round(Int, 10*T)
 
 SLPDE = SemiLinearPDE((LaplaceBeltrami(0.01),LaplaceBeltrami(0.1)), (NonlinearOperator((u,v)->(u-v)*u/v),NonlinearOperator((u,v)->u^2-v)), U0)
 io = VideoStream(scene);
+scene
 ETDRK4(SLPDE, T, n, surf, io; colorrange = :notfixed)
 Makie.save("plots/LGM.gif", io)
 
 SLPDE = SemiLinearPDE((NonlocalLaplaceBeltrami(0.01, 0.0, 1.0),NonlocalLaplaceBeltrami(0.1, -0.5, 0.05)), (NonlinearOperator((u,v)->(u-v)*u/v),NonlinearOperator((u,v)->u^2-v)), U0)
 io = VideoStream(scene);
+scene
 ETDRK4(SLPDE, T, n, surf, io; colorrange = :notfixed)
 Makie.save("plots/NGM.gif", io)

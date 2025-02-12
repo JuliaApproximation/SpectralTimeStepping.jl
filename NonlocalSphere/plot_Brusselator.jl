@@ -1,4 +1,5 @@
-using FastTransforms, LinearAlgebra, Makie, Random
+using FastTransforms, LinearAlgebra, Makie, GLMakie, Random
+import Makie.Vec3d
 
 include("SLPDE.jl")
 include("etdrk4.jl")
@@ -46,20 +47,18 @@ fillF!(Gt, G)
 
 println("These are the extrema of the first component: ", extrema(F))
 println(minimum(F)/(ue/sqrt(4π)),"  ",maximum(F)/(ue/sqrt(4π)))
-scene = Scene(resolution = (1200, 1200));
+scene = Scene(size = (1200, 1200));
 surf = surface!(scene, x, y, z, color = Ft, colormap = :viridis, colorrange = extrema(F));
-update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
-scene.center = false
+update_cam!(scene, Camera3D(scene), Vec3d(2.5), Vec3d(0), Vec3d(0, 0, 1))
 scene
 Makie.save("plots/LBRu0.jpeg", scene)
 Makie.save("plots/NBRu0.jpeg", scene)
 
 println("These are the extrema of the second component: ", extrema(G))
 println(minimum(G)/(ve/sqrt(4π)),"  ",maximum(G)/(ve/sqrt(4π)))
-scene = Scene(resolution = (1200, 1200));
+scene = Scene(size = (1200, 1200));
 surf = surface!(scene, x, y, z, color = Gt, colormap = :viridis, colorrange = extrema(G));
-update_cam!(scene, Vec3f0(2.5), Vec3f0(0), Vec3f0(0, 0, 1))
-scene.center = false
+update_cam!(scene, Camera3D(scene), Vec3d(2.5), Vec3d(0), Vec3d(0, 0, 1))
 scene
 Makie.save("plots/LBRv0.jpeg", scene)
 Makie.save("plots/NBRv0.jpeg", scene)
@@ -69,10 +68,12 @@ n = round(Int, 10*T)
 
 SLPDE = SemiLinearPDE((LaplaceBeltrami(ε),LaplaceBeltrami(inv(sqrt(τ)))), (NonlinearOperator((u,v)->ε^2*E-u+f*u^2*v),NonlinearOperator((u,v)->(u-u^2*v)/(τ*ε^2))), U0)
 io = VideoStream(scene);
+scene
 ETDRK4(SLPDE, T, n, surf, io; colorrange=:notfixed)
 Makie.save("plots/LBR.gif", io)
 
 SLPDE = SemiLinearPDE((NonlocalLaplaceBeltrami(ε, 0.0, 1.0),NonlocalLaplaceBeltrami(inv(sqrt(τ)), 0.0, 1.0)), (NonlinearOperator((u,v)->ε^2*E-u+f*u^2*v),NonlinearOperator((u,v)->(u-u^2*v)/(τ*ε^2))), U0)
 io = VideoStream(scene);
+scene
 ETDRK4(SLPDE, T, n, surf, io; colorrange=:notfixed)
 Makie.save("plots/NBR.gif", io)
